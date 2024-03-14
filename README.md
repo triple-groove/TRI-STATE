@@ -1,5 +1,10 @@
 # TRI-STATE
 
+![image](https://github.com/triple-groove/TRI-STATE/assets/163369748/10e813d7-44a1-4c6c-af8c-2e1c55ce112b)
+
+![image](https://github.com/triple-groove/TRI-STATE/assets/163369748/178e5791-71d4-458d-b960-cf7c98e1f54d)
+
+
 TRI-STATE is an interactive art installation created in Unity for the VRChat platform. It features a mesmerizing display of triangular structures, light lines, and audio-reactive elements that respond to the beat of the music.
 
 ## Features
