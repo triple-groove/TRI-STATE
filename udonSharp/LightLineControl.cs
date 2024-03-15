@@ -9,37 +9,7 @@
 
     LightLineControl.cs
 
-    The LightLineControl script manages the behavior and appearance of light lines in a VRChat
-    world. It offers a range of customization options and effects to create dynamic and
-    visually appealing lighting experiences.
-
-    Key Features:
-    - Controls the color, intensity, and animation of light lines based on predefined patterns or real-time input.
-    - Supports multiple modes of operation, such as static colors, color gradients, or audio-reactive effects.
-    - Allows for easy customization of light line properties, such as length, width, spacing, and material.
-    - Enables smooth transitions and interpolation between different lighting states or patterns.
-    - Provides an intuitive interface for users to interact with and control the light lines through gestures or triggers.
-    - Optimizes performance by efficiently managing light line rendering and updates.
-
-    Usage:
-    1. Attach the LightLineControl script to the relevant GameObject(s) representing the light lines in your VRChat world.
-    2. Configure the desired light line properties, such as color, intensity, animation patterns, and interaction triggers, in the Unity Inspector.
-    3. Implement any necessary user interactions or controls to manipulate the light lines dynamically.
-    4. Test the light line behavior and performance in various scenarios to ensure optimal visual quality and responsiveness.
-
-    Dependencies:
-    - Requires the VRChat SDK and Udon# compiler for proper functionality.
-    - May interact with other scripts or components, such as audio sources, gestures, or avatar tracking systems.
-
-    Customization:
-    - Modify the light line properties, animation patterns, and interaction triggers to fit your specific design requirements.
-    - Extend the script to include additional lighting effects, such as pulsing, strobing, or color cycling.
-    - Integrate with external data sources or APIs to create dynamic and immersive lighting experiences.
-
-    Troubleshooting:
-    - Ensure that the light line GameObjects and their associated components are properly configured in the Unity Inspector.
-    - Verify that the necessary dependencies and assets are correctly imported and referenced in your VRChat world.
-    - Test the light line control script in various lighting conditions and performance scenarios to identify and optimize any potential issues.
+    The LightLineControl script manages the behavior and appearance of light lines.
 */
 
 using UdonSharp;
@@ -59,7 +29,7 @@ namespace AudioLink
     {
         // AudioLink variables
         public AudioLink audioLink;
-        public  int band = 1;
+        public int band = 0;
         [Range(0, 1)]
         [SerializeField] private float beatThreshold = 0.8f;
         [SerializeField] private float maxBPM = 200f;

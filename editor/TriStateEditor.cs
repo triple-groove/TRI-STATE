@@ -9,8 +9,8 @@
 
    TRI-STATE Editor
 
-   The TRI-STATE Editor is a Unity tool that allows users to generate a TRI-STATE structure
-   in the Unity scene. It provides a user interface for customizing various aspects of the
+   The TRI-STATE Editor is a Unity tool that allows users to generate a the VRChat world in
+   the Unity scene. It provides a user interface for customizing various aspects of the
    structure and generates the geometry based on the specified parameters.
 
    Main Components:
@@ -52,8 +52,6 @@
 #if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
-using System.Runtime.Remoting.Messaging;
-using System.Xml.Linq;
 
 public class TriStateEditor : EditorWindow
 {

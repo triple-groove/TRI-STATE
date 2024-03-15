@@ -10,40 +10,12 @@
     ElevatorPositionStateMachine.cs
 
     The ElevatorPositionStateMachine script controls the position and movement of an elevator
-    in a VRChat world. It utilizes a state machine approach to manage the elevator's behavior
-    based on user interactions and predefined positions.
-
-    Key Features:
-    - Defines a set of elevator positions, such as ground floor, first floor, and second floor.
-    - Implements a state machine to handle transitions between different elevator positions.
-    - Responds to user input, such as button presses or triggers, to initiate elevator movement.
-    - Animates the elevator's movement smoothly between positions using interpolation.
-    - Provides visual feedback to users, such as updating button colors or displaying floor indicators.
-    - Ensures safe and consistent elevator behavior, preventing unexpected movements or glitches.
-
-    Usage:
-    1. Attach the ElevatorPositionStateMachine script to the elevator GameObject in your VRChat world.
-    2. Configure the elevator positions, state transitions, and input triggers in the Unity Inspector.
-    3. Implement any necessary visual feedback or user interface elements to interact with the elevator.
-    4. Test the elevator's functionality thoroughly to ensure smooth and reliable operation.
-
-    Dependencies:
-    - Requires the VRChat SDK and Udon# compiler for proper functionality.
-    - May interact with other scripts or components, such as button controllers or user tracking systems.
-
-    Customization:
-    - Modify the elevator positions, state transitions, and input triggers to fit your specific requirements.
-    - Adjust the animation parameters, such as movement speed or easing curves, to achieve the desired visual effect.
-    - Extend the script to include additional features or behaviors, such as audio feedback or special effects.
-
-    Troubleshooting:
-    - Ensure that the elevator GameObject and its associated components are properly configured in the Unity Inspector.
-    - Double-check the state machine transitions and input trigger assignments to avoid any conflicts or unintended behavior.
-    - Test the elevator thoroughly in various scenarios to identify and resolve any potential issues or edge cases.
+    in a VRChat world. It utilizes a state machine approach to manage the elevator's based on a timer.
 */
 
 using UdonSharp;
 using UnityEngine;
+using VRC.SDKBase;
 
 public class ElevatorPositionStateMachine : UdonSharpBehaviour
 {
@@ -70,7 +42,12 @@ public class ElevatorPositionStateMachine : UdonSharpBehaviour
     private const int MovingToTop = 1;
     private const int WaitingAtTop = 2;
     private const int MovingToBottom = 3;
+
+    // Synced variables for elevator state and position
+    [UdonSynced]
     private int currentState = WaitingAtBottom;
+    [UdonSynced]
+    private Vector3 elevatorPosition;
 
     void Start()
     {
@@ -79,6 +56,7 @@ public class ElevatorPositionStateMachine : UdonSharpBehaviour
         if (elevatorObject != null)
         {
             bottomPosition = elevatorObject.transform.position;
+            elevatorPosition = bottomPosition; // Initialize synced position
         }
         else
         {
@@ -97,7 +75,7 @@ public class ElevatorPositionStateMachine : UdonSharpBehaviour
                 if (Time.time - moveStartTime > waitTime)
                 {
                     moveStartTime = Time.time;
-                    currentState = MovingToTop;
+                    ChangeElevatorState(MovingToTop);
                 }
                 break;
             case MovingToTop:
@@ -105,14 +83,14 @@ public class ElevatorPositionStateMachine : UdonSharpBehaviour
                 if (Time.time - moveStartTime > travelTime)
                 {
                     moveStartTime = Time.time;
-                    currentState = WaitingAtTop;
+                    ChangeElevatorState(WaitingAtTop);
                 }
                 break;
             case WaitingAtTop:
                 if (Time.time - moveStartTime > waitTime)
                 {
                     moveStartTime = Time.time;
-                    currentState = MovingToBottom;
+                    ChangeElevatorState(MovingToBottom);
                 }
                 break;
             case MovingToBottom:
@@ -120,7 +98,7 @@ public class ElevatorPositionStateMachine : UdonSharpBehaviour
                 if (Time.time - moveStartTime > travelTime)
                 {
                     moveStartTime = Time.time;
-                    currentState = WaitingAtBottom;
+                    ChangeElevatorState(WaitingAtBottom);
                 }
                 break;
         }
@@ -134,7 +112,49 @@ public class ElevatorPositionStateMachine : UdonSharpBehaviour
             float elapsed = Time.time - moveStartTime;
             float fraction = elapsed / travelTime; // Normalized time fraction
             float currentHeight = Mathf.Lerp(startHeight, targetHeight, fraction);
-            elevatorObject.transform.position = new Vector3(elevatorObject.transform.position.x, currentHeight, elevatorObject.transform.position.z);
+            elevatorPosition = new Vector3(elevatorObject.transform.position.x, currentHeight, elevatorObject.transform.position.z);
+            elevatorObject.transform.position = elevatorPosition;
+        }
+        else
+        {
+            Debug.LogError("CircleElevator not found.");
+        }
+    }
+
+    // Change the elevator state and request serialization
+    void ChangeElevatorState(int newState)
+    {
+        currentState = newState;
+        RequestSerialization();
+    }
+
+    // Called when the script receives synchronized data
+    public override void OnDeserialization()
+    {
+        GameObject elevatorObject = GameObject.Find("CircleElevator");
+        if (elevatorObject != null)
+        {
+            // Update the elevator position based on the synchronized data
+            elevatorObject.transform.position = elevatorPosition;
+
+            // Handle the synchronized state
+            switch (currentState)
+            {
+                case WaitingAtBottom:
+                    // No action needed, already waiting at the bottom
+                    break;
+                case MovingToTop:
+                    // Start moving to the top position
+                    moveStartTime = Time.time;
+                    break;
+                case WaitingAtTop:
+                    // No action needed, already waiting at the top
+                    break;
+                case MovingToBottom:
+                    // Start moving to the bottom position
+                    moveStartTime = Time.time;
+                    break;
+            }
         }
         else
         {
