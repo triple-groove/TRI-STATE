@@ -16,7 +16,9 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
+[UdonBehaviourSyncMode(BehaviourSyncMode.Continuous)]
 public class ElevatorPositionStateMachine : UdonSharpBehaviour
 {
     // Time to wait at the top and bottom positions
@@ -67,6 +69,7 @@ public class ElevatorPositionStateMachine : UdonSharpBehaviour
         moveStartTime = Time.time;
     }
 
+    // Update is called once per frame
     void Update()
     {
         switch (currentState)
@@ -121,12 +124,47 @@ public class ElevatorPositionStateMachine : UdonSharpBehaviour
         }
     }
 
-    // Change the elevator state and request serialization
+    // Custom network event for synchronizing the elevator state and position
+    public void OnElevatorSync()
+    {
+        GameObject elevatorObject = GameObject.Find("CircleElevator");
+        if (elevatorObject != null)
+        {
+            // Update the elevator position based on the synchronized data
+            elevatorObject.transform.position = elevatorPosition;
+
+            // Handle the synchronized state
+            switch (currentState)
+            {
+                case WaitingAtBottom:
+                    // No action needed, already waiting at the bottom
+                    break;
+                case MovingToTop:
+                    // Start moving to the top position
+                    moveStartTime = Time.time;
+                    break;
+                case WaitingAtTop:
+                    // No action needed, already waiting at the top
+                    break;
+                case MovingToBottom:
+                    // Start moving to the bottom position
+                    moveStartTime = Time.time;
+                    break;
+            }
+        }
+        else
+        {
+            Debug.LogError("CircleElevator not found.");
+        }
+    }
+
+    // Change the elevator state and send a custom network event for synchronization
     void ChangeElevatorState(int newState)
     {
         currentState = newState;
-        RequestSerialization();
+        SendCustomNetworkEvent(NetworkEventTarget.All, nameof(OnElevatorSync));
     }
+
 
     // Called when the script receives synchronized data
     public override void OnDeserialization()

@@ -56,6 +56,7 @@ using UnityEditor;
 public class TriStateEditor : EditorWindow
 {
     private float triangleWidth = 48f;
+    private float triangleBleed = 0.01f;
     private float outlinesWidth = 1f;
     private int numberOfOutlines = 8;
     private float outlineSpacing = 50;
@@ -102,6 +103,7 @@ public class TriStateEditor : EditorWindow
         GUILayout.Label("", EditorStyles.boldLabel);
         GUILayout.Label("Triangle Wall Settings", EditorStyles.boldLabel);
         triangleWidth = EditorGUILayout.FloatField("Triangle Width", triangleWidth);
+        triangleBleed = EditorGUILayout.FloatField("Triangle Bleed", triangleBleed);
         outlinesWidth = EditorGUILayout.FloatField("Outlines Width", outlinesWidth);
         triangleMaterial = (Material)EditorGUILayout.ObjectField("Triangle Material", triangleMaterial, typeof(Material), false);
         GUILayout.Label("", EditorStyles.boldLabel);
@@ -253,7 +255,8 @@ public class TriStateEditor : EditorWindow
 
     GameObject CreateDoubleTriangleAtPosition(Vector3 position, Quaternion rotation, Transform parent)
     {
-        GameObject doubleTriangleObject = DoubleTriangleGenerator.Generate(triangleWidth, outlinesWidth);
+        float triangleWidthAdjusted = (1+triangleBleed) * triangleWidth;
+        GameObject doubleTriangleObject = DoubleTriangleGenerator.Generate(triangleWidthAdjusted, outlinesWidth);
         doubleTriangleObject.transform.SetParent(parent, false);
 
         // Move object to specified position
@@ -287,7 +290,8 @@ public class TriStateEditor : EditorWindow
 
     GameObject CreateHollowTriangleAtPosition(Vector3 position, Quaternion rotation, Transform parent)
     {
-        Mesh hollowTriangleMesh = HollowTriangleGenerator.Generate(triangleWidth, outlinesWidth);
+        float triangleWidthAdjusted = (1+triangleBleed) * triangleWidth;
+        Mesh hollowTriangleMesh = HollowTriangleGenerator.Generate(triangleWidthAdjusted, outlinesWidth);
         GameObject hollowTriangleObject = new GameObject("HollowTriangle");
         hollowTriangleObject.transform.SetParent(parent, false);
 

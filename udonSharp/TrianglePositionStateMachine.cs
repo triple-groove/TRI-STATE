@@ -16,7 +16,9 @@
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 
+[UdonBehaviourSyncMode(BehaviourSyncMode.Continuous)]
 public class TrianglePositionStateMachine : UdonSharpBehaviour
 {
     // Time to wait at origin and target
@@ -46,7 +48,11 @@ public class TrianglePositionStateMachine : UdonSharpBehaviour
     [UdonSynced]
     private int currentState = WaitingAtOrigin;
     [UdonSynced]
-    private Vector3[] trianglePositions = new Vector3[3];
+    private Vector3 triangle0Position;
+    [UdonSynced]
+    private Vector3 triangle1Position;
+    [UdonSynced]
+    private Vector3 triangle2Position;
 
     void Start()
     {
@@ -57,7 +63,18 @@ public class TrianglePositionStateMachine : UdonSharpBehaviour
             if (triangleObject != null)
             {
                 originPositions[i] = triangleObject.transform.position;
-                trianglePositions[i] = originPositions[i]; // Initialize synced positions
+                switch (i)
+                {
+                    case 0:
+                        triangle0Position = originPositions[i];
+                        break;
+                    case 1:
+                        triangle1Position = originPositions[i];
+                        break;
+                    case 2:
+                        triangle2Position = originPositions[i];
+                        break;
+                }
             }
             else
             {
@@ -83,6 +100,7 @@ public class TrianglePositionStateMachine : UdonSharpBehaviour
         moveStartTime = Time.time;
     }
 
+    // Update is called once per frame
     void Update()
     {
         switch (currentState)
@@ -95,10 +113,9 @@ public class TrianglePositionStateMachine : UdonSharpBehaviour
                 }
                 break;
             case MovingToTarget:
-                for (int i = 0; i < 3; i++)
-                {
-                    MoveToTarget(ref originPositions[i], targetPositions[i], $"Triangle{i}", i);
-                }
+                MoveToTarget(ref originPositions[0], targetPositions[0], "Triangle0", ref triangle0Position);
+                MoveToTarget(ref originPositions[1], targetPositions[1], "Triangle1", ref triangle1Position);
+                MoveToTarget(ref originPositions[2], targetPositions[2], "Triangle2", ref triangle2Position);
                 if (Time.time - moveStartTime > travelTime)
                 {
                     moveStartTime = Time.time;
@@ -113,10 +130,9 @@ public class TrianglePositionStateMachine : UdonSharpBehaviour
                 }
                 break;
             case MovingBackToOrigin:
-                for (int i = 0; i < 3; i++)
-                {
-                    MoveToOrigin(ref originPositions[i], targetPositions[i], $"Triangle{i}", i);
-                }
+                MoveToOrigin(ref originPositions[0], targetPositions[0], "Triangle0", ref triangle0Position);
+                MoveToOrigin(ref originPositions[1], targetPositions[1], "Triangle1", ref triangle1Position);
+                MoveToOrigin(ref originPositions[2], targetPositions[2], "Triangle2", ref triangle2Position);
                 if (Time.time - moveStartTime > travelTime)
                 {
                     moveStartTime = Time.time;
@@ -126,15 +142,15 @@ public class TrianglePositionStateMachine : UdonSharpBehaviour
         }
     }
 
-    void MoveToTarget(ref Vector3 originPosition, Vector3 targetPosition, string objectName, int index)
+    void MoveToTarget(ref Vector3 originPosition, Vector3 targetPosition, string objectName, ref Vector3 trianglePosition)
     {
         GameObject triangleObject = GameObject.Find(objectName);
         if (triangleObject != null)
         {
             float elapsed = Time.time - moveStartTime;
             float fraction = elapsed / travelTime; // Normalized time fraction
-            trianglePositions[index] = Vector3.Lerp(originPosition, targetPosition, fraction);
-            triangleObject.transform.position = trianglePositions[index];
+            trianglePosition = Vector3.Lerp(originPosition, targetPosition, fraction);
+            triangleObject.transform.position = trianglePosition;
         }
         else
         {
@@ -142,15 +158,15 @@ public class TrianglePositionStateMachine : UdonSharpBehaviour
         }
     }
 
-    void MoveToOrigin(ref Vector3 originPosition, Vector3 targetPosition, string objectName, int index)
+    void MoveToOrigin(ref Vector3 originPosition, Vector3 targetPosition, string objectName, ref Vector3 trianglePosition)
     {
         GameObject triangleObject = GameObject.Find(objectName);
         if (triangleObject != null)
         {
             float elapsed = Time.time - moveStartTime;
             float fraction = elapsed / travelTime; // Normalized time fraction
-            trianglePositions[index] = Vector3.Lerp(targetPosition, originPosition, fraction);
-            triangleObject.transform.position = trianglePositions[index];
+            trianglePosition = Vector3.Lerp(targetPosition, originPosition, fraction);
+            triangleObject.transform.position = trianglePosition;
         }
         else
         {
@@ -158,11 +174,59 @@ public class TrianglePositionStateMachine : UdonSharpBehaviour
         }
     }
 
-    // Change the triangle state and request serialization
+    // Custom network event for synchronizing the triangle state and positions
+    public void OnTriangleSync()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject triangleObject = GameObject.Find($"Triangle{i}");
+            if (triangleObject != null)
+            {
+                // Update the triangle position based on the synchronized data
+                switch (i)
+                {
+                    case 0:
+                        triangleObject.transform.position = triangle0Position;
+                        break;
+                    case 1:
+                        triangleObject.transform.position = triangle1Position;
+                        break;
+                    case 2:
+                        triangleObject.transform.position = triangle2Position;
+                        break;
+                }
+
+                // Handle the synchronized state
+                switch (currentState)
+                {
+                    case WaitingAtOrigin:
+                        moveStartTime = Time.time;
+                        break;
+                    case MovingToTarget:
+                        // Start moving to the target position
+                        moveStartTime = Time.time;
+                        break;
+                    case WaitingAtTarget:
+                        moveStartTime = Time.time;
+                        break;
+                    case MovingBackToOrigin:
+                        // Start moving back to the origin position
+                        moveStartTime = Time.time;
+                        break;
+                }
+            }
+            else
+            {
+                Debug.LogError($"Triangle{i} not found.");
+            }
+        }
+    }
+
+    // Change the triangle state and send a custom network event for synchronization
     void ChangeTriangleState(int newState)
     {
         currentState = newState;
-        RequestSerialization();
+        SendCustomNetworkEvent(NetworkEventTarget.All, nameof(OnTriangleSync));
     }
 
     // Called when the script receives synchronized data
@@ -174,7 +238,18 @@ public class TrianglePositionStateMachine : UdonSharpBehaviour
             if (triangleObject != null)
             {
                 // Update the triangle position based on the synchronized data
-                triangleObject.transform.position = trianglePositions[i];
+                switch (i)
+                {
+                    case 0:
+                        triangleObject.transform.position = triangle0Position;
+                        break;
+                    case 1:
+                        triangleObject.transform.position = triangle1Position;
+                        break;
+                    case 2:
+                        triangleObject.transform.position = triangle2Position;
+                        break;
+                }
 
                 // Handle the synchronized state
                 switch (currentState)

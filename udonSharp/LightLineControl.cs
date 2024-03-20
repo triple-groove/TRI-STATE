@@ -11,21 +11,16 @@
 
     The LightLineControl script manages the behavior and appearance of light lines.
 */
-
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 using VRC.Udon;
+using VRC.Udon.Common.Interfaces;
 
 namespace AudioLink
 {
-#if UDONSHARP
-    using UdonSharp;
-
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Continuous)]
     public class LightLineControl : UdonSharpBehaviour
-#else
-    public class LightLineControl : MonoBehaviour
-#endif
     {
         // AudioLink variables
         public AudioLink audioLink;
@@ -46,29 +41,49 @@ namespace AudioLink
         // Array to store references to LightLine objects
         private GameObject[][][] lightLineSets;
 
-        // Array to store the current colors of each LightLine object in a set
-        private Color[][][] lightLineColors;
+        // Arrays to store the current colors of each LightLine object in a set
+        [UdonSynced]
+        private Color lightLineColors_0;
+        [UdonSynced]
+        private Color lightLineColors_1;
+        [UdonSynced]
+        private Color lightLineColors_2;
+        [UdonSynced]
+        private Color lightLineColors_3;
+        [UdonSynced]
+        private Color lightLineColors_4;
+        [UdonSynced]
+        private Color lightLineColors_5;
+        [UdonSynced]
+        private Color lightLineColors_6;
+        [UdonSynced]
+        private Color lightLineColors_7;
 
         // Current position of the colored line (for mode A)
+        [UdonSynced]
         private int currentPosition = 0;
 
         // Current color of the line (for mode A)
+        [UdonSynced]
         private Color currentColor;
 
         // Number of iterations before switching modes
         [SerializeField] private const int iterationsBeforeSwitch = 20;
 
         // Current mode (0 for mode A, 1 for mode B)
+        [UdonSynced]
         private int currentMode = 0;
 
         // Iteration counter
+        [UdonSynced]
         private int iterationCounter = 0;
 
         // Array to store references to floor line objects
         private GameObject[][] floorLineSet;
 
         // Array to store the current colors of each floor line object
-        private Color[][] floorLineColors;
+        [UdonSynced]
+        private Color floorLineColor;
 
         // Beat detection variables
         private bool isBeat = false;
@@ -81,22 +96,17 @@ namespace AudioLink
             // Initialize the array of lightLineSets
             lightLineSets = new GameObject[numberOfSuperSets][][];
 
-            // Initialize the array of lightLineColors
-            lightLineColors = new Color[numberOfSuperSets][][];
-
             // Iterate over each super set
             for (int i = 0; i < numberOfSuperSets; i++)
             {
                 // Initialize the array for the current super set
                 lightLineSets[i] = new GameObject[setsPerSuperSet][];
-                lightLineColors[i] = new Color[setsPerSuperSet][];
 
                 // Iterate over each set in the current super set
                 for (int j = 0; j < setsPerSuperSet; j++)
                 {
                     // Initialize the array for the current set
                     lightLineSets[i][j] = new GameObject[3];
-                    lightLineColors[i][j] = new Color[3];
 
                     // Find and store references to LightLine objects in the current set
                     for (int k = 0; k < 3; k++)
@@ -115,7 +125,9 @@ namespace AudioLink
                         {
                             // Store the reference in the array
                             lightLineSets[i][j][k] = lightLine;
-                            lightLineColors[i][j][k] = Color.black; // Initialize the color to black
+
+                            // Initialize the color to black
+                            SetColorArray(j, Color.black);
                         }
                         else
                         {
@@ -128,14 +140,12 @@ namespace AudioLink
 
             // Initialize the arrays for floor line objects and colors
             floorLineSet = new GameObject[numberOfSuperSets][];
-            floorLineColors = new Color[numberOfSuperSets][];
 
             // Iterate over each super set
             for (int i = 0; i < numberOfSuperSets; i++)
             {
                 // Initialize the arrays for the current super set
                 floorLineSet[i] = new GameObject[3];
-                floorLineColors[i] = new Color[3];
 
                 // Find and store references to floor line objects in the current super set
                 for (int k = 0; k < 3; k++)
@@ -151,7 +161,10 @@ namespace AudioLink
                     {
                         // Store the reference in the array
                         floorLineSet[i][k] = floorLine;
-                        floorLineColors[i][k] = Color.white; // Initialize the color to white
+
+                        // Initialize the color to white
+                        int flattenedIndex = GetFlattenedFloorLineIndex(i, k);
+                        floorLineColor = Color.white;
                     }
                     else
                     {
@@ -162,7 +175,10 @@ namespace AudioLink
             }
 
             // Generate an initial random color for mode A
-            currentColor = Random.ColorHSV(0f, 1f, 1f, 1f, 1f, 1f);
+            if (Networking.IsOwner(gameObject))
+            {
+                currentColor = Random.ColorHSV(0f, 1f, 1f, 1f, 1f, 1f);
+            }
 
             // Calculate the maximum interval based on the maximum BPM
             maxInterval = 60f / maxBPM;
@@ -190,28 +206,8 @@ namespace AudioLink
                                 isBeat = true;
                                 lastBeatTime = currentTime;
 
-                                // Check the current mode
-                                if (currentMode == 0)
-                                {
-                                    // Mode A: Light up one line at a time
-                                    UpdateModeA();
-                                }
-                                else
-                                {
-                                    // Mode B: Light up all lines at once, propagating a new color each time
-                                    UpdateModeB();
-                                }
-
-                                // Increment the iteration counter
-                                iterationCounter++;
-
-                                // Check if it's time to switch modes
-                                if (iterationCounter >= iterationsBeforeSwitch * setsPerSuperSet)
-                                {
-                                    // Switch to the other mode
-                                    currentMode = 1 - currentMode;
-                                    iterationCounter = 0;
-                                }
+                                // Send a custom network event to trigger the beat for all players
+                                SendCustomNetworkEvent(NetworkEventTarget.All, nameof(OnBeat));
                             }
                         }
                         else
@@ -237,7 +233,8 @@ namespace AudioLink
 
                             if (renderer != null)
                             {
-                                renderer.material.SetColor("_EmissionColor", lightLineColors[i][j][k]);
+                                Color color = GetColorArray(j);
+                                renderer.material.SetColor("_EmissionColor", color);
                             }
                         }
                     }
@@ -257,10 +254,38 @@ namespace AudioLink
 
                         if (renderer != null)
                         {
-                            renderer.material.SetColor("_EmissionColor", floorLineColors[i][k]);
+                            int flattenedIndex = GetFlattenedFloorLineIndex(i, k);
+                            renderer.material.SetColor("_EmissionColor", floorLineColor);
                         }
                     }
                 }
+            }
+        }
+
+        // Custom network event for handling the beat
+        public void OnBeat()
+        {
+            // Check the current mode
+            if (currentMode == 0)
+            {
+                // Mode A: Light up one line at a time
+                UpdateModeA();
+            }
+            else
+            {
+                // Mode B: Light up all lines at once, propagating a new color each time
+                UpdateModeB();
+            }
+
+            // Increment the iteration counter
+            iterationCounter++;
+
+            // Check if it's time to switch modes
+            if (iterationCounter >= iterationsBeforeSwitch * setsPerSuperSet)
+            {
+                // Switch to the other mode
+                currentMode = 1 - currentMode;
+                iterationCounter = 0;
             }
         }
 
@@ -271,17 +296,11 @@ namespace AudioLink
             for (int i = 0; i < numberOfSuperSets; i++)
             {
                 // Set the color of the current position to the current color
-                for (int k = 0; k < 3; k++)
-                {
-                    lightLineColors[i][currentPosition][k] = currentColor;
-                }
+                SetColorArray(currentPosition, currentColor);
 
                 // Set the color of the previous position to black
                 int previousPosition = (currentPosition - 1 + setsPerSuperSet) % setsPerSuperSet;
-                for (int k = 0; k < 3; k++)
-                {
-                    lightLineColors[i][previousPosition][k] = Color.black;
-                }
+                SetColorArray(previousPosition, Color.black);
             }
 
             // Move to the next position
@@ -298,9 +317,11 @@ namespace AudioLink
             {
                 for (int k = 0; k < 3; k++)
                 {
-                    if (lightLineColors[i][0][k] != Color.black)
+                    Color color = GetColorArray(0);
+                    if (color != Color.black)
                     {
-                        floorLineColors[i][k] = lightLineColors[i][0][k];
+                        int flattenedFloorLineIndex = GetFlattenedFloorLineIndex(i, k);
+                        floorLineColor = color;
                     }
                 }
             }
@@ -317,17 +338,12 @@ namespace AudioLink
             {
                 for (int j = setsPerSuperSet - 1; j > 0; j--)
                 {
-                    for (int k = 0; k < 3; k++)
-                    {
-                        lightLineColors[i][j][k] = lightLineColors[i][j - 1][k];
-                    }
+                    Color previousColor = GetColorArray(j - 1);
+                    SetColorArray(j, previousColor);
                 }
 
                 // Set the new random color for the first set in each superset
-                for (int k = 0; k < 3; k++)
-                {
-                    lightLineColors[i][0][k] = newRandomColor;
-                }
+                SetColorArray(0, newRandomColor);
             }
 
             // Update the colors of the floor lines to match the color of the first set
@@ -335,9 +351,74 @@ namespace AudioLink
             {
                 for (int k = 0; k < 3; k++)
                 {
-                    floorLineColors[i][k] = newRandomColor;
+                    int flattenedFloorLineIndex = GetFlattenedFloorLineIndex(i, k);
+                    floorLineColor = newRandomColor;
                 }
             }
+        }
+
+        // Helper method to get the appropriate color array based on superset and wall indices
+        private Color GetColorArray(int superSetIndex)
+        {
+            switch (superSetIndex)
+            {
+                case 0:
+                    return lightLineColors_0;
+                case 1:
+                    return lightLineColors_1;
+                case 2:
+                    return lightLineColors_2;
+                case 3:
+                    return lightLineColors_3;
+                case 4:
+                    return lightLineColors_4;
+                case 5:
+                    return lightLineColors_5;
+                case 6:
+                    return lightLineColors_6;
+                case 7:
+                    return lightLineColors_7;
+                default:
+                    return Color.black;
+            }
+        }
+
+        // Helper method to set the appropriate color array based on superset and wall indices
+        void SetColorArray(int superSetIndex, Color color)
+        {
+            switch (superSetIndex)
+            {
+                case 0:
+                    lightLineColors_0 = color;
+                    break;
+                case 1:
+                    lightLineColors_1 = color;
+                    break;
+                case 2:
+                    lightLineColors_2 = color;
+                    break;
+                case 3:
+                    lightLineColors_3 = color;
+                    break;
+                case 4:
+                    lightLineColors_4 = color;
+                    break;
+                case 5:
+                    lightLineColors_5 = color;
+                    break;
+                case 6:
+                    lightLineColors_6 = color;
+                    break;
+                case 7:
+                    lightLineColors_7 = color;
+                    break;
+            }
+        }
+
+        // Helper method to convert 2D indices to a 1D index for floor lines
+        private int GetFlattenedFloorLineIndex(int i, int k)
+        {
+            return i * 3 + k;
         }
     }
 }
