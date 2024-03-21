@@ -81,10 +81,6 @@ namespace AudioLink
         // Array to store references to floor line objects
         private GameObject[][] floorLineSet;
 
-        // Array to store the current colors of each floor line object
-        [UdonSynced]
-        private Color floorLineColor;
-
         // Beat detection variables
         private bool isBeat = false;
         private float lastBeatTime;
@@ -138,7 +134,7 @@ namespace AudioLink
                 }
             }
 
-            // Initialize the arrays for floor line objects and colors
+            // Initialize the arrays for floor line objects
             floorLineSet = new GameObject[numberOfSuperSets][];
 
             // Iterate over each super set
@@ -161,10 +157,6 @@ namespace AudioLink
                     {
                         // Store the reference in the array
                         floorLineSet[i][k] = floorLine;
-
-                        // Initialize the color to white
-                        int flattenedIndex = GetFlattenedFloorLineIndex(i, k);
-                        floorLineColor = Color.white;
                     }
                     else
                     {
@@ -254,8 +246,7 @@ namespace AudioLink
 
                         if (renderer != null)
                         {
-                            int flattenedIndex = GetFlattenedFloorLineIndex(i, k);
-                            renderer.material.SetColor("_EmissionColor", floorLineColor);
+                            renderer.material.SetColor("_EmissionColor", currentColor);
                         }
                     }
                 }
@@ -320,8 +311,7 @@ namespace AudioLink
                     Color color = GetColorArray(0);
                     if (color != Color.black)
                     {
-                        int flattenedFloorLineIndex = GetFlattenedFloorLineIndex(i, k);
-                        floorLineColor = color;
+                        currentColor = color;
                     }
                 }
             }
@@ -351,8 +341,7 @@ namespace AudioLink
             {
                 for (int k = 0; k < 3; k++)
                 {
-                    int flattenedFloorLineIndex = GetFlattenedFloorLineIndex(i, k);
-                    floorLineColor = newRandomColor;
+                    currentColor = newRandomColor;
                 }
             }
         }
@@ -413,12 +402,6 @@ namespace AudioLink
                     lightLineColors_7 = color;
                     break;
             }
-        }
-
-        // Helper method to convert 2D indices to a 1D index for floor lines
-        private int GetFlattenedFloorLineIndex(int i, int k)
-        {
-            return i * 3 + k;
         }
     }
 }
