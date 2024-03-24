@@ -26,19 +26,17 @@ namespace AudioLink
         public AudioLink audioLink;
         public int band = 0;
         [Range(0, 1)]
-        [SerializeField] private float beatThreshold = 0.8f;
-        [SerializeField] private float maxBPM = 200f;
+        public float beatThreshold = 0.8f;
+        public float maxBPM = 200f;
+        public int setsPerSuperSet = 8;
+        public int numberOfSuperSets = 3;
+        public int iterationsBeforeSwitch = 2;
 
-        // Public variable for the number of sets of LightLine objects
-        public int numberOfSets = 24;
+        private const int numberOfSides = 3;
 
-        // Number of sets in a super set
-        private const int setsPerSuperSet = 8;
+        private int numberOfSets;
 
-        // Number of super sets
-        private const int numberOfSuperSets = 3;
-
-        // Array to store references to LightLine objects
+        // lightLineSets[numberOfSuperSets][setsPerSuperSet][numberOfSides]
         private GameObject[][][] lightLineSets;
 
         // Arrays to store the current colors of each LightLine object in a set
@@ -67,9 +65,6 @@ namespace AudioLink
         [UdonSynced]
         private Color currentColor;
 
-        // Number of iterations before switching modes
-        [SerializeField] private const int iterationsBeforeSwitch = 20;
-
         // Current mode (0 for mode A, 1 for mode B)
         [UdonSynced]
         private int currentMode = 0;
@@ -79,7 +74,11 @@ namespace AudioLink
         private int iterationCounter = 0;
 
         // Array to store references to floor line objects
-        private GameObject[][] floorLineSet;
+        private GameObject[] floorLineSet;
+
+        // Array to store the current colors of each floor line object
+        [UdonSynced]
+        private Color floorLineColor;
 
         // Beat detection variables
         private bool isBeat = false;
@@ -89,6 +88,8 @@ namespace AudioLink
         // Start is called before the first frame update
         void Start()
         {
+            numberOfSets = numberOfSuperSets * setsPerSuperSet;
+
             // Initialize the array of lightLineSets
             lightLineSets = new GameObject[numberOfSuperSets][][];
 
@@ -102,10 +103,10 @@ namespace AudioLink
                 for (int j = 0; j < setsPerSuperSet; j++)
                 {
                     // Initialize the array for the current set
-                    lightLineSets[i][j] = new GameObject[3];
+                    lightLineSets[i][j] = new GameObject[numberOfSides];
 
                     // Find and store references to LightLine objects in the current set
-                    for (int k = 0; k < 3; k++)
+                    for (int k = 0; k < numberOfSides; k++)
                     {
                         // Calculate the index of the LightLine object based on the super set and set
                         int lightLineIndex = i * setsPerSuperSet + j;
@@ -134,45 +135,30 @@ namespace AudioLink
                 }
             }
 
-            // Initialize the arrays for floor line objects
-            floorLineSet = new GameObject[numberOfSuperSets][];
+            floorLineSet = new GameObject[numberOfSides];
 
-            // Iterate over each super set
-            for (int i = 0; i < numberOfSuperSets; i++)
+            for (int i = 0; i < numberOfSides; i++)
             {
-                // Initialize the arrays for the current super set
-                floorLineSet[i] = new GameObject[3];
+                string floorLineName = $"LightLineWall{i}/LightLine_{numberOfSets}";
 
-                // Find and store references to floor line objects in the current super set
-                for (int k = 0; k < 3; k++)
+                GameObject floorLine = GameObject.Find(floorLineName);
+
+                if (floorLine != null)
                 {
-                    // Construct the name of the floor line object
-                    string floorLineName = $"LightLineWall{k}/LightLine_{numberOfSets}";
-
-                    // Find the floor line object by name
-                    GameObject floorLine = GameObject.Find(floorLineName);
-
-                    // Check if the floor line object is found
-                    if (floorLine != null)
-                    {
-                        // Store the reference in the array
-                        floorLineSet[i][k] = floorLine;
-                    }
-                    else
-                    {
-                        // Log a warning if the floor line object is not found
-                        Debug.LogWarning($"Floor line {floorLineName} not found.");
-                    }
+                    floorLineSet[i] = floorLine;
+                    floorLineColor = Color.white;
+                }
+                else
+                {
+                    Debug.LogWarning($"Floor line {floorLineName} not found.");
                 }
             }
 
-            // Generate an initial random color for mode A
             if (Networking.IsOwner(gameObject))
             {
                 currentColor = Random.ColorHSV(0f, 1f, 1f, 1f, 1f, 1f);
             }
 
-            // Calculate the maximum interval based on the maximum BPM
             maxInterval = 60f / maxBPM;
         }
 
@@ -215,7 +201,7 @@ namespace AudioLink
             {
                 for (int j = 0; j < setsPerSuperSet; j++)
                 {
-                    for (int k = 0; k < 3; k++)
+                    for (int k = 0; k < numberOfSides; k++)
                     {
                         GameObject currentLightLine = lightLineSets[i][j][k];
 
@@ -233,21 +219,17 @@ namespace AudioLink
                 }
             }
 
-            // Apply the colors to the floor line objects in all supersets
-            for (int i = 0; i < numberOfSuperSets; i++)
+            for (int i = 0; i < numberOfSides; i++)
             {
-                for (int k = 0; k < 3; k++)
+                GameObject currentFloorLine = floorLineSet[i];
+
+                if (currentFloorLine != null)
                 {
-                    GameObject currentFloorLine = floorLineSet[i][k];
+                    Renderer renderer = currentFloorLine.GetComponent<Renderer>();
 
-                    if (currentFloorLine != null)
+                    if (renderer != null)
                     {
-                        Renderer renderer = currentFloorLine.GetComponent<Renderer>();
-
-                        if (renderer != null)
-                        {
-                            renderer.material.SetColor("_EmissionColor", currentColor);
-                        }
+                        renderer.material.SetColor("_EmissionColor", floorLineColor);
                     }
                 }
             }
@@ -280,19 +262,13 @@ namespace AudioLink
             }
         }
 
-        // Method for updating colors in mode A
         void UpdateModeA()
         {
-            // Update the colors for all supersets
-            for (int i = 0; i < numberOfSuperSets; i++)
-            {
-                // Set the color of the current position to the current color
-                SetColorArray(currentPosition, currentColor);
+            SetColorArray(currentPosition, currentColor);
 
-                // Set the color of the previous position to black
-                int previousPosition = (currentPosition - 1 + setsPerSuperSet) % setsPerSuperSet;
-                SetColorArray(previousPosition, Color.black);
-            }
+            // Set the color of the previous position to black
+            int previousPosition = (currentPosition - 1 + setsPerSuperSet) % setsPerSuperSet;
+            SetColorArray(previousPosition, Color.black);
 
             // Move to the next position
             currentPosition = (currentPosition + 1) % setsPerSuperSet;
@@ -303,48 +279,34 @@ namespace AudioLink
                 currentColor = Random.ColorHSV(0f, 1f, 1f, 1f, 1f, 1f);
             }
 
-            // Update the colors of the floor lines to match the color of the first set, if it's not black
-            for (int i = 0; i < numberOfSuperSets; i++)
-            {
-                for (int k = 0; k < 3; k++)
+                for (int k = 0; k < numberOfSides; k++)
                 {
                     Color color = GetColorArray(0);
                     if (color != Color.black)
                     {
-                        currentColor = color;
+                        floorLineColor = color;
                     }
                 }
-            }
         }
 
-        // Method for updating colors in mode B
         void UpdateModeB()
         {
             // Generate a new random color
             Color newRandomColor = Random.ColorHSV(0f, 1f, 1f, 1f, 1f, 1f);
 
             // Propagate the new color down the sets in all supersets
-            for (int i = 0; i < numberOfSuperSets; i++)
+            for (int j = setsPerSuperSet - 1; j > 0; j--)
             {
-                for (int j = setsPerSuperSet - 1; j > 0; j--)
-                {
-                    Color previousColor = GetColorArray(j - 1);
-                    SetColorArray(j, previousColor);
-                }
-
-                // Set the new random color for the first set in each superset
-                SetColorArray(0, newRandomColor);
+                Color previousColor = GetColorArray(j - 1);
+                SetColorArray(j, previousColor);
             }
 
-            // Update the colors of the floor lines to match the color of the first set
-            for (int i = 0; i < numberOfSuperSets; i++)
-            {
-                for (int k = 0; k < 3; k++)
-                {
-                    currentColor = newRandomColor;
-                }
-            }
+            // Set the new random color for the first set in each superset
+            SetColorArray(0, newRandomColor);
+
+            floorLineColor = newRandomColor;
         }
+
 
         // Helper method to get the appropriate color array based on superset and wall indices
         private Color GetColorArray(int superSetIndex)
