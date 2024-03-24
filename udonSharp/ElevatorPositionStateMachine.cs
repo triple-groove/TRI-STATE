@@ -23,7 +23,7 @@ public class ElevatorPositionStateMachine : UdonSharpBehaviour
 {
     // Time to wait at the top and bottom positions
     [SerializeField]
-    private float waitTime = 5f;
+    private float waitTime = 60f;
 
     // Time to move between top and bottom positions
     [SerializeField]

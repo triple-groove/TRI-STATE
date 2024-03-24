@@ -11,7 +11,6 @@
 
     The LightLineControl script manages the behavior and appearance of light lines.
 */
-using System.CodeDom;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -35,7 +34,7 @@ namespace AudioLink
         [SerializeField]
         private const int numberOfSuperSets = 3;
         [SerializeField]
-        private const int iterationsBeforeSwitch = 2;
+        private const int iterationsBeforeSwitch = 8;
 
         private const int numberOfSides = 3;
 
@@ -145,7 +144,7 @@ namespace AudioLink
 
             floorLineColor = Color.white;
 
-            if (Networking.IsOwner(gameObject))
+            if (Networking.IsMaster)
             {
                 currentColor = Random.ColorHSV(0f, 1f, 1f, 1f, 1f, 1f);
             }
@@ -186,7 +185,11 @@ namespace AudioLink
                 }
             }
 
-            // Apply the colors to the LightLine objects in all supersets
+            ApplyColors();
+        }
+
+        void ApplyColors()
+        {
             for (int i = 0; i < numberOfSuperSets; i++)
             {
                 for (int j = 0; j < setsPerSuperSet; j++)
@@ -250,6 +253,11 @@ namespace AudioLink
                 currentMode = 1 - currentMode;
                 iterationCounter = 0;
             }
+
+            if (Networking.IsMaster)
+            {
+                RequestSerialization();
+            }
         }
 
         void UpdateModeA()
@@ -263,13 +271,14 @@ namespace AudioLink
             // Move to the next position
             currentPosition = (currentPosition + 1) % setsPerSuperSet;
 
+            // Master sends the new color for next time
             // Generate a new random color if the current position is at the top
-            if (currentPosition == 0)
+            if (currentPosition == 0 && Networking.IsMaster)
             {
                 currentColor = Random.ColorHSV(0f, 1f, 1f, 1f, 1f, 1f);
             }
 
-                for (int k = 0; k < numberOfSides; k++)
+            for (int k = 0; k < numberOfSides; k++)
                 {
                     Color color = lightLineColors[0];
                     if (color != Color.black)
@@ -281,9 +290,6 @@ namespace AudioLink
 
         void UpdateModeB()
         {
-            // Generate a new random color
-            Color newRandomColor = Random.ColorHSV(0f, 1f, 1f, 1f, 1f, 1f);
-
             // Propagate the new color down the sets in all supersets
             for (int j = setsPerSuperSet - 1; j > 0; j--)
             {
@@ -292,9 +298,15 @@ namespace AudioLink
             }
 
             // Set the new random color for the first set in each superset
-            lightLineColors[0] = newRandomColor;
+            lightLineColors[0] = currentColor;
 
-            floorLineColor = newRandomColor;
+            floorLineColor = currentColor;
+
+            // Master sends the new color for next time
+            if (Networking.IsMaster)
+            {
+                currentColor = Random.ColorHSV(0f, 1f, 1f, 1f, 1f, 1f);
+            }
         }
     }
 }
