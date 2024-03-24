@@ -22,15 +22,19 @@ namespace AudioLink
     [UdonBehaviourSyncMode(BehaviourSyncMode.Continuous)]
     public class LightLineControl : UdonSharpBehaviour
     {
-        // AudioLink variables
         public AudioLink audioLink;
         public int band = 0;
-        [Range(0, 1)]
-        public float beatThreshold = 0.8f;
-        public float maxBPM = 200f;
-        public int setsPerSuperSet = 8;
-        public int numberOfSuperSets = 3;
-        public int iterationsBeforeSwitch = 2;
+
+        [SerializeField, Range(0, 1)]
+        private float beatThreshold = 0.8f;
+        [SerializeField]
+        private float maxBPM = 200f;
+        [SerializeField]
+        private int setsPerSuperSet = 8;
+        [SerializeField]
+        private int numberOfSuperSets = 3;
+        [SerializeField]
+        private int iterationsBeforeSwitch = 2;
 
         private const int numberOfSides = 3;
 
@@ -136,7 +140,7 @@ namespace AudioLink
             }
 
             floorLineSet = new GameObject[numberOfSides];
-
+            
             for (int i = 0; i < numberOfSides; i++)
             {
                 string floorLineName = $"LightLineWall{i}/LightLine_{numberOfSets}";
@@ -146,13 +150,14 @@ namespace AudioLink
                 if (floorLine != null)
                 {
                     floorLineSet[i] = floorLine;
-                    floorLineColor = Color.white;
                 }
                 else
                 {
                     Debug.LogWarning($"Floor line {floorLineName} not found.");
                 }
             }
+
+            floorLineColor = Color.white;
 
             if (Networking.IsOwner(gameObject))
             {
