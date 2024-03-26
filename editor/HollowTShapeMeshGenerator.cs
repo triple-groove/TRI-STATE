@@ -22,9 +22,8 @@ public static class HollowTShapeMeshGenerator
         float halfInnerWidth = halfOuterWidth - thickness;
         float halfInnerDepth = halfOuterDepth - thickness;
         float halfOuterStepWidth = stepWidth * 0.5f;
-        float halfOuterStepDepth = stepDepth * 0.5f;
         float halfInnerStepWidth = halfOuterStepWidth - thickness;
-        float halfInnerStepDepth = halfOuterStepDepth - thickness;
+        float innerStepDepth = stepDepth - thickness;
         float halfThickness = thickness * 0.5f;
 
 
@@ -40,8 +39,8 @@ public static class HollowTShapeMeshGenerator
         float y1 = halfInnerDepth;
         float y2 = -halfInnerDepth;
         float y3 = -halfOuterDepth;
-        float y4 = y3 - halfInnerStepDepth + thickness + thickness;
-        float y5 = y3 - halfInnerStepDepth + thickness;
+        float y4 = y3 - innerStepDepth + thickness + thickness;
+        float y5 = y3 - innerStepDepth + thickness;
 
         float topY =  halfThickness;
         float botY = -halfThickness;
