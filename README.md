@@ -23,6 +23,7 @@ TRI-STATE is an interactive art installation created in Unity for the VRChat pla
 IDFC, as in I dont care what you do with it.
 
 ## Images
+![TRI_STATE_logo](https://github.com/triple-groove/TRI-STATE/assets/163369748/458aa8ca-e1d5-45fa-aa81-5f65f8ec49e4)
 ![image](https://github.com/triple-groove/TRI-STATE/assets/163369748/07ae437a-26c7-4e58-8071-c017e17f4926)
 ![image](https://github.com/triple-groove/TRI-STATE/assets/163369748/0439535d-875d-4c05-b0ba-1436fa07e10a)
 ![image](https://github.com/triple-groove/TRI-STATE/assets/163369748/5b952e07-9ec4-44b0-8802-36d494a7ab29)
