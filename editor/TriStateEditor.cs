@@ -74,6 +74,16 @@ public class TriStateEditor : EditorWindow
     private int circleElevatorNumCircles = 8;
     private float circleElevatorSpacing = 0.13f;
     private Material circleElevatorMaterial;
+    private float djBoothPosOffset = 29f;
+    private float djBoothWidth = 5.0f;
+    private float djBoothHeight = 2.6f;
+    private float djBoothDepth = 1.5f;
+    private float djBoothStepWidthMax = 9f;
+    private float djBoothStepDepth = 3f;
+    private float djBoothThickness = 0.02f;
+    private int djBoothNumRectangles = 8;
+    private int djBoothNumSteps = 8;
+    private Material djBoothMaterial;
 
     private static readonly string defaultTriangleMaterialtPath = "Assets/Materials/Walls.mat";
     private static readonly string defaultHollowTriangleMaterialPath = "Assets/Materials/TrisOutlinesGlow.mat";
@@ -95,6 +105,7 @@ public class TriStateEditor : EditorWindow
         hollowTriangleMaterial = AssetDatabase.LoadAssetAtPath<Material>(defaultHollowTriangleMaterialPath);
         lightLineMaterial = AssetDatabase.LoadAssetAtPath<Material>(lightLineMaterialPath);
         circleElevatorMaterial = AssetDatabase.LoadAssetAtPath<Material>(lightLineMaterialPath);
+        djBoothMaterial = AssetDatabase.LoadAssetAtPath<Material>(lightLineMaterialPath);
     }
 
     private void OnGUI()
@@ -127,6 +138,18 @@ public class TriStateEditor : EditorWindow
         circleElevatorNumCircles = EditorGUILayout.IntField("Circle Elevator Num Circles", circleElevatorNumCircles);
         circleElevatorSpacing = EditorGUILayout.FloatField("Circle Elevator Spacing", circleElevatorSpacing);
         circleElevatorMaterial = (Material)EditorGUILayout.ObjectField("Circle Elevator Material", circleElevatorMaterial, typeof(Material), false);
+        GUILayout.Label("", EditorStyles.boldLabel);
+        GUILayout.Label("DJ Booth Settings", EditorStyles.boldLabel);
+        djBoothPosOffset = EditorGUILayout.FloatField("DJ Position Offset", djBoothPosOffset);
+        djBoothWidth = EditorGUILayout.FloatField("DJ Booth Width", djBoothWidth);
+        djBoothHeight = EditorGUILayout.FloatField("DJ Booth Height", djBoothHeight);
+        djBoothDepth = EditorGUILayout.FloatField("DJ Booth Depth", djBoothDepth);
+        djBoothStepWidthMax = EditorGUILayout.FloatField("DJ Booth Step Width Max", djBoothStepWidthMax);
+        djBoothStepDepth = EditorGUILayout.FloatField("DJ Booth Step Depth", djBoothStepDepth);
+        djBoothThickness = EditorGUILayout.FloatField("DJ Booth Thickness", djBoothThickness);
+        djBoothNumRectangles = EditorGUILayout.IntField("DJ Booth Num Rectangles", djBoothNumRectangles);
+        djBoothNumSteps = EditorGUILayout.IntField("DJ Booth Num Steps", djBoothNumSteps);
+        djBoothMaterial = (Material)EditorGUILayout.ObjectField("DJ Booth Material", djBoothMaterial, typeof(Material), false);
 
         if (GUILayout.Button("Generate TRI-STATE"))
         {
@@ -161,6 +184,12 @@ public class TriStateEditor : EditorWindow
         // Create the circle elevator at the centroid of the base triangle
         GameObject circleElevator = CreateCircleElevator(elevatorPosition, circleElevatorRadius, circleElevatorThickness, circleElevatorHeight, tristate.transform);
         circleElevator.name = "CircleElevator";
+
+        // Create the DJ Booth at the desired position
+        Vector3 djBoothPosition = new Vector3(0, djBoothHeight/2, djBoothPosOffset);
+        Quaternion djBoothRotation = Quaternion.Euler(0, 180, 0);
+        GameObject djBooth = CreateDJBooth(djBoothPosition, djBoothRotation, tristate.transform);
+        djBooth.name = "DJBooth";
 
         // Calculate the positions for the triangles
         Vector3 midpoint0 = Vector3.zero;
@@ -348,6 +377,15 @@ public class TriStateEditor : EditorWindow
         circleElevator.transform.localPosition = position;
 
         return circleElevator;
+    }
+
+    GameObject CreateDJBooth(Vector3 position, Quaternion rotation, Transform parent)
+    {
+        GameObject djBooth = DJBoothStackGenerator.Generate(djBoothWidth, djBoothHeight, djBoothDepth, djBoothStepWidthMax, djBoothStepDepth, djBoothThickness, djBoothNumRectangles, djBoothNumSteps, djBoothMaterial);
+        djBooth.transform.SetParent(parent, false);
+        djBooth.transform.localPosition = position;
+        djBooth.transform.localRotation = rotation;
+        return djBooth;
     }
 }
 #endif
