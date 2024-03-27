@@ -7,9 +7,10 @@
        ╚═╝   ╚═╝  ╚═╝╚═╝      ╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚══════╝
     triple_groove - meow btw...if you even care
 
-    LightLineControl.cs
+    LightLineControl_DJBooth.cs
 
-    The LightLineControl script manages the behavior and appearance of light lines.
+    The LightLineControl_DJBooth script manages the behavior and appearance of layers
+    of DJ Booth.
 */
 using UdonSharp;
 using UnityEngine;
@@ -20,7 +21,7 @@ using VRC.Udon.Common.Interfaces;
 namespace AudioLink
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-    public class LightLineControl : UdonSharpBehaviour
+    public class LightLineControl_DJBooth : UdonSharpBehaviour
     {
         public AudioLink audioLink;
         public int band = 0;
@@ -32,19 +33,17 @@ namespace AudioLink
         [SerializeField]
         private const int setsPerSuperSet = 8;
         [SerializeField]
-        private const int numberOfSuperSets = 3;
+        private const int numberOfSuperSets = 2;
         [SerializeField]
         private const int iterationsBeforeSwitch = 8;
 
-        private const int numberOfSides = 3;
-
         private int numberOfSets;
 
-        // lightLineSets[numberOfSuperSets][setsPerSuperSet][numberOfSides]
-        private GameObject[][][] lightLineSets;
+        // layerSets[numberOfSuperSets][setsPerSuperSet]
+        private GameObject[][] layerSets;
 
-        // Arrays to store the current colors of each LightLine object in a set
-        private Color[] lightLineColors = new Color[setsPerSuperSet];
+        // Arrays to store the current colors of each Layer object in a set
+        private Color[] layerColors = new Color[setsPerSuperSet];
 
         // Current position of the colored line (for mode A)
         [UdonSynced]
@@ -62,13 +61,6 @@ namespace AudioLink
         [UdonSynced]
         private int iterationCounter = 0;
 
-        // Array to store references to floor line objects
-        private GameObject[] floorLineSet;
-
-        // Array to store the current colors of each floor line object
-        [UdonSynced]
-        private Color floorLineColor;
-
         // Beat detection variables
         private bool isBeat = false;
         private float lastBeatTime;
@@ -79,70 +71,43 @@ namespace AudioLink
         {
             numberOfSets = numberOfSuperSets * setsPerSuperSet;
 
-            // Initialize the array of lightLineSets
-            lightLineSets = new GameObject[numberOfSuperSets][][];
+            // Initialize the array of layerSets
+            layerSets = new GameObject[numberOfSuperSets][];
 
             // Iterate over each super set
             for (int i = 0; i < numberOfSuperSets; i++)
             {
                 // Initialize the array for the current super set
-                lightLineSets[i] = new GameObject[setsPerSuperSet][];
+                layerSets[i] = new GameObject[setsPerSuperSet];
 
                 // Iterate over each set in the current super set
                 for (int j = 0; j < setsPerSuperSet; j++)
                 {
-                    // Initialize the array for the current set
-                    lightLineSets[i][j] = new GameObject[numberOfSides];
+                    // Calculate the index of the Layer object based on the super set and set
+                    int layerIndex = i * setsPerSuperSet + j;
 
-                    // Find and store references to LightLine objects in the current set
-                    for (int k = 0; k < numberOfSides; k++)
+                    // Construct the name of the Layer object
+                    string layerName = $"DJBooth/Layer_{layerIndex}";
+
+                    // Find the Layer object by name
+                    GameObject layer = GameObject.Find(layerName);
+
+                    // Check if the Layer object is found
+                    if (layer != null)
                     {
-                        // Calculate the index of the LightLine object based on the super set and set
-                        int lightLineIndex = i * setsPerSuperSet + j;
+                        // Store the reference in the array
+                        layerSets[i][j] = layer;
 
-                        // Construct the name of the LightLine object
-                        string lightLineName = $"LightLineWall{k}/LightLine_{lightLineIndex}";
-
-                        // Find the LightLine object by name
-                        GameObject lightLine = GameObject.Find(lightLineName);
-
-                        // Check if the LightLine object is found
-                        if (lightLine != null)
-                        {
-                            // Store the reference in the array
-                            lightLineSets[i][j][k] = lightLine;
-
-                            // Initialize the color to black
-                            lightLineColors[j] = Color.black;
-                        }
-                        else
-                        {
-                            // Log a warning if the LightLine object is not found
-                            Debug.LogWarning($"LightLine {lightLineName} not found.");
-                        }
+                        // Initialize the color to black
+                        layerColors[j] = Color.black;
+                    }
+                    else
+                    {
+                        // Log a warning if the Layer object is not found
+                        Debug.LogWarning($"Layer {layerName} not found.");
                     }
                 }
             }
-
-            floorLineSet = new GameObject[numberOfSides];
-
-            for (int i = 0; i < numberOfSides; i++)
-            {
-                string floorLineName = $"LightLineWall{i}/LightLine_{numberOfSets}";
-
-                GameObject floorLine = GameObject.Find(floorLineName);
-
-                if (floorLine != null)
-                {
-                    floorLineSet[i] = floorLine;
-                }
-                else
-                {
-                    Debug.LogWarning($"Floor line {floorLineName} not found.");
-                }
-            }
-
-            floorLineColor = Color.white;
 
             if (Networking.IsMaster)
             {
@@ -194,35 +159,17 @@ namespace AudioLink
             {
                 for (int j = 0; j < setsPerSuperSet; j++)
                 {
-                    for (int k = 0; k < numberOfSides; k++)
-                    {
-                        GameObject currentLightLine = lightLineSets[i][j][k];
+                    GameObject currentLayer = layerSets[i][j];
 
-                        if (currentLightLine != null)
+                    if (currentLayer != null)
+                    {
+                        Renderer renderer = currentLayer.GetComponent<Renderer>();
+
+                        if (renderer != null)
                         {
-                            Renderer renderer = currentLightLine.GetComponent<Renderer>();
-
-                            if (renderer != null)
-                            {
-                                Color color = lightLineColors[j];
-                                renderer.material.SetColor("_EmissionColor", color);
-                            }
+                            Color color = layerColors[j];
+                            renderer.material.SetColor("_EmissionColor", color);
                         }
-                    }
-                }
-            }
-
-            for (int i = 0; i < numberOfSides; i++)
-            {
-                GameObject currentFloorLine = floorLineSet[i];
-
-                if (currentFloorLine != null)
-                {
-                    Renderer renderer = currentFloorLine.GetComponent<Renderer>();
-
-                    if (renderer != null)
-                    {
-                        renderer.material.SetColor("_EmissionColor", floorLineColor);
                     }
                 }
             }
@@ -262,11 +209,11 @@ namespace AudioLink
 
         void UpdateModeA()
         {
-            lightLineColors[currentPosition]= currentColor;
+            layerColors[currentPosition]= currentColor;
 
             // Set the color of the previous position to black
             int previousPosition = (currentPosition - 1 + setsPerSuperSet) % setsPerSuperSet;
-            lightLineColors[previousPosition] = Color.black;
+            layerColors[previousPosition] = Color.black;
 
             // Move to the next position
             currentPosition = (currentPosition + 1) % setsPerSuperSet;
@@ -277,15 +224,6 @@ namespace AudioLink
             {
                 currentColor = Random.ColorHSV(0f, 1f, 1f, 1f, 1f, 1f);
             }
-
-            for (int k = 0; k < numberOfSides; k++)
-            {
-                Color color = lightLineColors[0];
-                if (color != Color.black)
-                {
-                    floorLineColor = color;
-                }
-            }
         }
 
         void UpdateModeB()
@@ -293,14 +231,12 @@ namespace AudioLink
             // Propagate the new color down the sets in all supersets
             for (int j = setsPerSuperSet - 1; j > 0; j--)
             {
-                Color previousColor = lightLineColors[j - 1];
-                lightLineColors[j] = previousColor;
+                Color previousColor = layerColors[j - 1];
+                layerColors[j] = previousColor;
             }
 
             // Set the new random color for the first set in each superset
-            lightLineColors[0] = currentColor;
-
-            floorLineColor = currentColor;
+            layerColors[0] = currentColor;
 
             // Master sends the new color for next time
             if (Networking.IsMaster)
