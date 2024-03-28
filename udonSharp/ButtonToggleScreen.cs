@@ -13,7 +13,7 @@ public class ButtonToggleScreen : UdonSharpBehaviour
         toggleObject.SetActive(false);
     }
 
-    private void Interact()
+    public override void Interact()
     {
         toggleObject.SetActive(!toggleObject.activeSelf);
     }

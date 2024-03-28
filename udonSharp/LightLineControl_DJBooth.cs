@@ -37,8 +37,6 @@ namespace AudioLink
         [SerializeField]
         private const int iterationsBeforeSwitch = 8;
 
-        private int numberOfSets;
-
         // layerSets[numberOfSuperSets][setsPerSuperSet]
         private GameObject[][] layerSets;
 
@@ -69,8 +67,6 @@ namespace AudioLink
         // Start is called before the first frame update
         void Start()
         {
-            numberOfSets = numberOfSuperSets * setsPerSuperSet;
-
             // Initialize the array of layerSets
             layerSets = new GameObject[numberOfSuperSets][];
 

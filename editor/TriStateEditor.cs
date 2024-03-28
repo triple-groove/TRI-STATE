@@ -274,7 +274,7 @@ public class TriStateEditor : EditorWindow
         MeshCollider meshCollider = triangleObject.AddComponent<MeshCollider>();
         meshCollider.sharedMesh = triangleMesh;
         //meshCollider.convex = true; // Ensure convex is set to true for mesh colliders
-        meshCollider.inflateMesh = true; // Inflate the mesh collider to prevent tunneling
+        // meshCollider.inflateMesh = true; // Inflate the mesh collider to prevent tunneling
 
         return triangleObject;
     }
