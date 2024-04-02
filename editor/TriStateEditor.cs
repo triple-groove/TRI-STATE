@@ -84,10 +84,25 @@ public class TriStateEditor : EditorWindow
     private int djBoothNumRectangles = 8;
     private int djBoothNumSteps = 8;
     private Material djBoothMaterial;
+    private float triScreenBaseWidth = 4f;
+    private float triScreenThickness = 0.05f;
+    private float triScreenSideOffset = 0.30f;
+    private float triScreenInwardAngle = 20f;
+    private Material triScreenLeftMaterial;
+    private Material triScreenMiddleMaterial;
+    private Material triScreenRightMaterial;
+    private Material triScreenOutlineTriangleMaterial;
+    private float triScreenPositionZ = 31f;
+    private float triScreenPositionY = 4f;
+    private float triScreenTilt = 17f;
 
     private static readonly string defaultTriangleMaterialtPath = "Assets/Materials/Walls.mat";
     private static readonly string defaultHollowTriangleMaterialPath = "Assets/Materials/TrisOutlinesGlow.mat";
     private static readonly string lightLineMaterialPath = "Assets/Materials/LightLines.mat";
+    private static readonly string triScreenLeftMaterialPath = "Assets/Materials/TriPanelLeft.mat";
+    private static readonly string triScreenMiddleMaterialPath = "Assets/Materials/TriPanelMiddle.mat";
+    private static readonly string triScreenRightMaterialPath = "Assets/Materials/TriPanelRight.mat";
+    private static readonly string triScreenOutlineTriangleMaterialPath = "Assets/Materials/LightLines.mat";
 
     private float lightWallSpacing;
     private LightWallGenerator lightWallGenerator;
@@ -106,6 +121,11 @@ public class TriStateEditor : EditorWindow
         lightLineMaterial = AssetDatabase.LoadAssetAtPath<Material>(lightLineMaterialPath);
         circleElevatorMaterial = AssetDatabase.LoadAssetAtPath<Material>(lightLineMaterialPath);
         djBoothMaterial = AssetDatabase.LoadAssetAtPath<Material>(lightLineMaterialPath);
+        
+        triScreenLeftMaterial = AssetDatabase.LoadAssetAtPath<Material>(triScreenLeftMaterialPath);
+        triScreenMiddleMaterial = AssetDatabase.LoadAssetAtPath<Material>(triScreenMiddleMaterialPath);
+        triScreenRightMaterial = AssetDatabase.LoadAssetAtPath<Material>(triScreenRightMaterialPath);
+        triScreenOutlineTriangleMaterial = AssetDatabase.LoadAssetAtPath<Material>(triScreenOutlineTriangleMaterialPath);
     }
 
     private void OnGUI()
@@ -150,6 +170,21 @@ public class TriStateEditor : EditorWindow
         djBoothNumRectangles = EditorGUILayout.IntField("DJ Booth Num Rectangles", djBoothNumRectangles);
         djBoothNumSteps = EditorGUILayout.IntField("DJ Booth Num Steps", djBoothNumSteps);
         djBoothMaterial = (Material)EditorGUILayout.ObjectField("DJ Booth Material", djBoothMaterial, typeof(Material), false);
+        GUILayout.Label("", EditorStyles.boldLabel);
+        GUILayout.Label("Screen Settings", EditorStyles.boldLabel);
+        triScreenBaseWidth = EditorGUILayout.FloatField("Screen Base Width", triScreenBaseWidth);
+        triScreenThickness = EditorGUILayout.FloatField("Screen Thickness", triScreenThickness);
+        triScreenSideOffset = EditorGUILayout.FloatField("Screen Side Offset", triScreenSideOffset);
+        triScreenInwardAngle = EditorGUILayout.FloatField("Screen Inward Angle", triScreenInwardAngle);
+        triScreenLeftMaterial = (Material)EditorGUILayout.ObjectField("Screen Left Material", triScreenLeftMaterial, typeof(Material), false);
+        triScreenMiddleMaterial = (Material)EditorGUILayout.ObjectField("Screen Middle Material", triScreenMiddleMaterial, typeof(Material), false);
+        triScreenRightMaterial = (Material)EditorGUILayout.ObjectField("Screen Right Material", triScreenRightMaterial, typeof(Material), false);
+        triScreenOutlineTriangleMaterial = (Material)EditorGUILayout.ObjectField("Outline Triangle Material", triScreenOutlineTriangleMaterial, typeof(Material), false);
+        triScreenPositionY = EditorGUILayout.FloatField("Screen Y Position", triScreenPositionY);
+        triScreenPositionZ = EditorGUILayout.FloatField("Screen Z Position", triScreenPositionZ);
+        triScreenTilt = EditorGUILayout.FloatField("Screen Tilt", triScreenTilt);
+
+
 
         if (GUILayout.Button("Generate TRI-STATE"))
         {
@@ -190,6 +225,11 @@ public class TriStateEditor : EditorWindow
         Quaternion djBoothRotation = Quaternion.Euler(0, 180, 0);
         GameObject djBooth = CreateDJBooth(djBoothPosition, djBoothRotation, tristate.transform);
         djBooth.name = "DJBooth";
+
+        Vector3 triScreenPosition = new Vector3(0, triScreenPositionY, triScreenPositionZ);
+        Quaternion triScreenRotation = Quaternion.Euler(triScreenTilt, 180, 0);
+        GameObject triScreen = CreateTripleTriangleScreen(triScreenPosition, triScreenRotation, tristate.transform);
+        triScreen.name = "TriScreen";
 
         // Calculate the positions for the triangles
         Vector3 midpoint0 = Vector3.zero;
@@ -386,6 +426,26 @@ public class TriStateEditor : EditorWindow
         djBooth.transform.localPosition = position;
         djBooth.transform.localRotation = rotation;
         return djBooth;
+    }
+    
+    GameObject CreateTripleTriangleScreen(Vector3 position, Quaternion rotation, Transform parent)
+    {
+        GameObject triScreen = TripleTriangleScreenGenerator.Generate(
+            triScreenBaseWidth,
+            triScreenThickness,
+            triScreenSideOffset,
+            triScreenInwardAngle,
+            triScreenLeftMaterial,
+            triScreenMiddleMaterial,
+            triScreenRightMaterial,
+            triScreenOutlineTriangleMaterial
+        );
+
+        triScreen.transform.SetParent(parent, false);
+        triScreen.transform.localPosition = position;
+        triScreen.transform.localRotation = rotation;
+
+        return triScreen;
     }
 }
 #endif
